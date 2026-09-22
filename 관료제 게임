@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>K-관료제 업무 분류 게임</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #e5e7eb; /* tailwind bg-gray-200 */
+            /* Prevent double-tap zoom on mobile */
+            touch-action: manipulation; 
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Mobile App Container */
+        .app-container {
+            width: 100%;
+            max-width: 420px; /* Mobile width */
+            height: 100vh;
+            max-height: 900px;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        @media (min-width: 480px) {
+            .app-container {
+                height: 90vh;
+                border-radius: 1.5rem;
+            }
+        }
+
+        /* Document Card */
+        .doc-card {
+            background-color: #ffffff;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        /* Stamp Animation */
+        .stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-20deg) scale(2.5);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-weight: 900;
+            border: 5px solid;
+            border-radius: 8px;
+            padding: 12px 20px;
+            pointer-events: none;
+            z-index: 20;
+            text-align: center;
+            line-height: 1.2;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stamp.show {
+            transform: translate(-50%, -50%) rotate(-15deg) scale(1);
+            opacity: 1;
+        }
+
+        .stamp.approve {
+            color: #16a34a; /* green-600 */
+            border-color: #16a34a;
+            font-size: 2.5rem;
+        }
+
+        .stamp.reject {
+            color: #dc2626; /* red-600 */
+            border-color: #dc2626;
+            font-size: 1.8rem;
+        }
+
+        /* Button Press Effect */
+        .tap-btn {
+            transition: transform 0.1s ease, background-color 0.2s ease;
+        }
+        .tap-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <main class="app-container">
+        
+        <!-- Header -->
+        <header class="bg-slate-800 text-white p-4 shadow-md z-10 shrink-0">
+            <h1 class="text-xl font-bold text-center tracking-wide">K-관료제 업무 분류</h1>
+            <div class="flex justify-between items-center mt-2 text-sm text-slate-300">
+                <span id="score-display">정확도: 0/0</span>
+                <span id="progress-display">남은 서류: 7</span>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-600 h-2 rounded-full mt-2 overflow-hidden">
+                <div id="progress-bar" class="bg-blue-400 h-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </header>
+
+        <!-- Game Area -->
+        <div id="game-screen" class="flex-1 flex flex-col p-4 relative overflow-hidden">
+            
+            <!-- Task Card Container -->
+            <div class="flex-1 flex items-center justify-center p-2 mb-4">
+                <div class="doc-card w-full h-full max-h-[320px] rounded-2xl flex flex-col items-center justify-center p-6 text-center">
+                    <div class="text-xs font-bold text-slate-400 mb-4 border-b-2 border-slate-200 pb-2 w-full uppercase tracking-wider">업무 요청서</div>
+                    <h2 id="task-text" class="text-2xl font-extrabold text-slate-800 leading-snug break-keep">
+                        <!-- Task text will be injected here -->
+                    </h2>
+                    
+                    <!-- Feedback Stamp -->
+                    <div id="stamp" class="stamp">승인 완료!</div>
+                </div>
+            </div>
+
+            <!-- Controls (Buttons) -->
+            <div class="shrink-0 relative z-10" id="controls">
+                <p class="text-center text-xs text-slate-500 mb-3 font-medium">담당 부서를 탭하여 배정하세요</p>
+                
+                <!-- 2 Rows Grid for Buttons -->
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <button onclick="handleTap('인사팀')" class="tap-btn bg-blue-50 border-2 border-blue-200 text-blue-700 font-bold py-4 rounded-xl shadow-sm hover:bg-blue-100 flex flex-col items-center gap-1">
+                        <span class="text-2xl">👨‍💼</span>
+                        <span>인사팀</span>
+                    </button>
+                    <button onclick="handleTap('총무팀')" class="tap-btn bg-emerald-50 border-2 border-emerald-200 text-emerald-700 font-bold py-4 rounded-xl shadow-sm hover:bg-emerald-100 flex flex-col items-center gap-1">
+                        <span class="text-2xl">🏢</span>
+                        <span>총무팀</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="handleTap('재무팀')" class="tap-btn bg-amber-50 border-2 border-amber-200 text-amber-700 font-bold py-3 rounded-xl shadow-sm hover:bg-amber-100 flex flex-col items-center gap-1 text-sm">
+                        <span class="text-xl">💰</span>
+                        <span>재무팀</span>
+                    </button>
+                    <button onclick="handleTap('법무팀')" class="tap-btn bg-purple-50 border-2 border-purple-200 text-purple-700 font-bold py-3 rounded-xl shadow-sm hover:bg-purple-100 flex flex-col items-center gap-1 text-sm">
+                        <span class="text-xl">⚖️</span>
+                        <span>법무팀</span>
+                    </button>
+                    <button onclick="handleTap('IT지원팀')" class="tap-btn bg-slate-100 border-2 border-slate-300 text-slate-700 font-bold py-3 rounded-xl shadow-sm hover:bg-slate-200 flex flex-col items-center gap-1 text-sm">
+                        <span class="text-xl">💻</span>
+                        <span>IT지원</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Blocker to prevent double taps during animation -->
+            <div id="blocker" class="absolute inset-0 z-30 hidden"></div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="absolute inset-0 bg-slate-900 z-50 hidden flex-col justify-center items-center text-white p-6 text-center">
+            <span class="text-5xl mb-4">📊</span>
+            <h2 class="text-2xl font-bold mb-6 text-slate-300">인사 평가 결과</h2>
+            
+            <div class="text-7xl font-black text-blue-400 mb-2" id="final-score">0<span class="text-4xl text-slate-500">/7</span></div>
+            <p class="text-slate-400 mb-8">정확하게 배정한 업무 수</p>
+            
+            <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-700 mb-8">
+                <p class="text-sm text-slate-400 mb-2">당신의 사내 평가 등급</p>
+                <h3 class="text-3xl font-extrabold text-yellow-400 mb-3" id="rank-title">S급 인재</h3>
+                <p class="text-slate-300 text-sm leading-relaxed break-keep" id="rank-desc">
+                    설명 텍스트
+                </p>
+            </div>
+            
+            <button onclick="initGame()" class="tap-btn bg-white text-slate-900 font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-gray-100 w-full max-w-sm">
+                🔄 다시 출근하기
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // Task Data Setup
+        const tasksData = [
+            { text: '신규 입사자 연봉 계약서 작성', dept: '인사팀' },
+            { text: '사무실 복사기 토너 교체 및 A4용지 주문', dept: '총무팀' },
+            { text: '타사와의 비밀유지계약서(NDA) 조항 검토', dept: '법무팀' },
+            { text: '법인카드 사용 내역 정산 및 전표 처리', dept: '재무팀' },
+            { text: '회의실 와이파이 연결 불량 및 PC 블루스크린 해결', dept: 'IT지원팀' },
+            { text: '전 직원 명절 선물 세트 선정 및 택배 발송', dept: '총무팀' },
+            { text: '직장 내 괴롭힘 관련 고충 상담', dept: '인사팀' }
+        ];
+
+        // State Variables
+        let currentTasks = [];
+        let currentIndex = 0;
+        let score = 0;
+        let isAnimating = false;
+
+        // DOM Elements
+        const taskTextEl = document.getElementById('task-text');
+        const stampEl = document.getElementById('stamp');
+        const blockerEl = document.getElementById('blocker');
+        const gameScreen = document.getElementById('game-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const scoreDisplay = document.getElementById('score-display');
+        const progressDisplay = document.getElementById('progress-display');
+        const progressBar = document.getElementById('progress-bar');
+
+        function initGame() {
+            // Copy tasks and reset state
+            currentTasks = [...tasksData];
+            currentIndex = 0;
+            score = 0;
+            isAnimating = false;
+
+            // Reset UI Screens
+            resultScreen.classList.add('hidden');
+            resultScreen.classList.remove('flex');
+            gameScreen.classList.remove('hidden');
+            
+            updateUI();
+        }
+
+        function updateUI() {
+            if (currentIndex >= currentTasks.length) {
+                endGame();
+                return;
+            }
+
+            // Update Task Text
+            taskTextEl.textContent = currentTasks[currentIndex].text;
+            
+            // Update Headers
+            scoreDisplay.textContent = `정확도: ${score}/${currentIndex}`;
+            progressDisplay.textContent = `남은 서류: ${currentTasks.length - currentIndex}`;
+            
+            // Update Progress Bar
+            const percent = (currentIndex / currentTasks.length) * 100;
+            progressBar.style.width = `${percent}%`;
+
+            // Reset Stamp & Blocker
+            stampEl.className = 'stamp';
+            blockerEl.classList.add('hidden');
+            isAnimating = false;
+        }
+
+        function handleTap(selectedDept) {
+            if (isAnimating) return;
+            isAnimating = true;
+            blockerEl.classList.remove('hidden'); // Prevent further clicks
+
+            const currentTask = currentTasks[currentIndex];
+            const isCorrect = selectedDept === currentTask.dept;
+
+            // Apply Stamp Effect
+            if (isCorrect) {
+                score++;
+                stampEl.innerHTML = '승인 완료!';
+                stampEl.className = 'stamp approve show';
+            } else {
+                stampEl.innerHTML = '우리 부서<br>소관 아닙니다!';
+                stampEl.className = 'stamp reject show';
+            }
+
+            // Wait for animation, then next task
+            setTimeout(() => {
+                currentIndex++;
+                updateUI();
+            }, 1200); // 1.2 seconds delay for the user to see the stamp
+        }
+
+        function endGame() {
+            gameScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            resultScreen.classList.add('flex');
+            
+            // Final progress bar fill
+            progressBar.style.width = '100%';
+            scoreDisplay.textContent = `정확도: ${score}/${currentTasks.length}`;
+            progressDisplay.textContent = `업무 종료`;
+
+            // Setup Result Data
+            document.getElementById('final-score').innerHTML = `${score}<span class="text-4xl text-slate-500">/${currentTasks.length}</span>`;
+
+            let title = "";
+            let desc = "";
+
+            if (score === 7) {
+                title = "S급 인재 🌟";
+                desc = "완벽합니다! 회사 내 모든 업무 프로세스를 꿰뚫고 있는 진정한 에이스입니다. 임원 승진은 시간문제네요.";
+            } else if (score >= 5) {
+                title = "우수 사원 📈";
+                desc = "훌륭합니다! 대부분의 부서 R&R을 잘 이해하고 있습니다. 동료들에게 신뢰받는 든든한 실무자입니다.";
+            } else if (score >= 3) {
+                title = "평범한 사원 😐";
+                desc = "나쁘지 않지만 가끔 타 부서에서 전화가 오네요. 부서별 업무 분장에 대해 조금 더 관심을 가져보세요.";
+            } else {
+                title = "폐급 신입 💣";
+                desc = "삐빅- 폭탄 돌리기 실패! 하루 종일 타 부서의 항의 전화를 받고 있습니다. 시말서를 준비하세요.";
+            }
+
+            document.getElementById('rank-title').textContent = title;
+            document.getElementById('rank-desc').textContent = desc;
+        }
+
+        // Start game on load
+        window.onload = initGame;
+    </script>
+</body>
+</html>
